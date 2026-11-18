@@ -4,7 +4,7 @@ from network.canonical import valid_digest
 from study.timeline import position_sources, timeline_arrows, validate_position_sources
 from topology.chains import inclusion_chain_map
 from topology.f2 import apply_columns
-from topology.homology import StaticSummary, compute_homology, static_summary
+from topology.homology import StaticSummary, compute_homology, cycle_coordinates, static_summary
 
 
 class AnalysisError(ValueError):
@@ -39,8 +39,13 @@ class FrozenAnalysis:
 
 def build_induced_map(source_index, target_index, source, target):
     _, transport, _ = inclusion_chain_map(source.chain, target.chain)
-    target_slots = {cycle: 1 << index for index, cycle in enumerate(target.representatives)}
-    columns = tuple(target_slots.get(apply_columns(transport, cycle), 0)
+    # The inclusion sends cycles to cycles and boundaries to boundaries, so it
+    # induces a map on H1.  A transported representative may differ from a
+    # target representative by a filled-face boundary; only its coset in
+    # cycles mod boundaries determines the induced column.  Coordinates are
+    # taken in the target's single frozen basis, so relations sharing a target
+    # position share the same frozen coordinate system.
+    columns = tuple(cycle_coordinates(target, apply_columns(transport, cycle))
                     for cycle in source.representatives)
     return InducedMap(source_index, target_index, len(source.representatives), len(target.representatives), columns)
 
